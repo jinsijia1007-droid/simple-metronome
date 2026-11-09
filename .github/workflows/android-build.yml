@@ -1,9 +1,9 @@
 name: Android CI
 
 on:
-  workflow_dispatch:        # 手动触发按钮
+  workflow_dispatch:
   push:
-    branches: [main]        # 推送到 main 时也自动构建
+    branches: [main]
 
 jobs:
   build:
@@ -20,6 +20,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
 
       - name: Grant execute permission
         run: chmod +x gradlew
