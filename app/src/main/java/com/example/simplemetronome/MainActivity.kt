@@ -29,7 +29,8 @@ class MainActivity : Activity() {
     private lateinit var bpmSeek: SeekBar
     private lateinit var beatSelector: TextView
 
-    private var audioTrack: AudioTrack? = null
+    private var accentTrack: AudioTrack? = null
+    private var normalTrack: AudioTrack? = null
     private var beatThread: Thread? = null
     private val handler = Handler(Looper.getMainLooper())
 
