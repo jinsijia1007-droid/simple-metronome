@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 底座 -->
+    <path
+        android:fillColor="#D32F2F"
+        android:pathData="M34,78 L74,78 L64,30 L44,30 Z" />
+    <!-- 刻度 -->
+    <path android:fillColor="#FFFFFF" android:pathData="M40,70 L46,70 L46,72 L40,72 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M62,70 L68,70 L68,72 L62,72 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M43,60 L48,60 L48,62 L43,62 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M60,60 L65,60 L65,62 L60,62 Z" />
+    <!-- 摆杆 -->
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M53,30 L55,30 L55.5,78 L52.5,78 Z" />
+    <!-- 摆锤 -->
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M54,54 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+</vector>
