@@ -18,7 +18,8 @@ import kotlin.math.sin
 class MainActivity : Activity() {
 
     private var bpm = 120
-    private var beatsPerBar = 4
+    private var beatsPerBar = 4   // 分子
+    private var beatUnit = 4      // 分母
     private var accentEnabled = true
     private var isRunning = false
 
@@ -27,14 +28,13 @@ class MainActivity : Activity() {
     private lateinit var beatDots: TextView
     private lateinit var startButton: Button
     private lateinit var bpmSeek: SeekBar
-    private lateinit var beatSelector: TextView
+    private lateinit var numeratorText: TextView
+    private lateinit var denominatorText: TextView
 
     private var accentTrack: AudioTrack? = null
     private var normalTrack: AudioTrack? = null
     private var beatThread: Thread? = null
     private val handler = Handler(Looper.getMainLooper())
-
-    private val beatOptions = intArrayOf(2, 3, 4, 6)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +42,7 @@ class MainActivity : Activity() {
         buildUi()
         loadPrefs()
         updateBpmDisplay()
-        updateBeatSelector()
+        updateBeatDisplay()
         updateDotsForBeat(0)
     }
 
@@ -61,13 +61,50 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         })
 
-        beatSelector = TextView(this).apply {
-            textSize = 24f
-            setTextColor(0xFFCCCCCC.toInt())
+        // ---------- 拍号控制行 ----------
+        val beatRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 24)
+            setPadding(0, 16, 0, 8)
         }
-        root.addView(beatSelector)
+
+        beatRow.addView(smallBtn("−") { changeNumerator(-1) })
+        numeratorText = TextView(this).apply {
+            textSize = 36f
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+            width = 90
+        }
+        beatRow.addView(numeratorText)
+        beatRow.addView(smallBtn("+") { changeNumerator(1) })
+
+        beatRow.addView(TextView(this).apply {
+            text = "/"
+            textSize = 36f
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(32, 0, 32, 0)
+        })
+
+        beatRow.addView(smallBtn("−") { changeDenominator(-1) })
+        denominatorText = TextView(this).apply {
+            textSize = 36f
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+            width = 90
+        }
+        beatRow.addView(denominatorText)
+        beatRow.addView(smallBtn("+") { changeDenominator(1) })
+
+        root.addView(beatRow)
+
+        // ---------- BPM ----------
+        root.addView(TextView(this).apply {
+            text = "BPM"
+            textSize = 18f
+            setTextColor(0xFF888888.toInt())
+            gravity = Gravity.CENTER
+        })
 
         bpmText = TextView(this).apply {
             textSize = 96f
@@ -93,7 +130,7 @@ class MainActivity : Activity() {
         root.addView(bpmSeek, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(0, 24, 0, 24) })
+        ).apply { setMargins(0, 16, 0, 16) })
 
         val btnRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -141,6 +178,29 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
+    private fun smallBtn(label: String, onClick: () -> Unit): Button =
+        Button(this).apply {
+            text = label
+            textSize = 20f
+            minimumWidth = 0
+            minWidth = 0
+            setPadding(24, 8, 24, 8)
+            setOnClickListener { onClick() }
+        }
+
+    private fun changeNumerator(delta: Int) {
+        beatsPerBar = (beatsPerBar + delta).coerceIn(1, 16)
+        updateBeatDisplay()
+        updateDotsForBeat(0)
+        savePrefs()
+    }
+
+    private fun changeDenominator(delta: Int) {
+        beatUnit = (beatUnit + delta).coerceIn(1, 16)
+        updateBeatDisplay()
+        savePrefs()
+    }
+
     private fun changeBpm(delta: Int) {
         bpm = (bpm + delta).coerceIn(30, 240)
         updateBpmDisplay()
@@ -152,15 +212,9 @@ class MainActivity : Activity() {
         bpmSeek.progress = bpm - 30
     }
 
-    private fun updateBeatSelector() {
-        beatSelector.text = "${beatsPerBar}/4"
-        beatSelector.setOnClickListener {
-            val idx = beatOptions.indexOf(beatsPerBar)
-            beatsPerBar = beatOptions[(idx + 1) % beatOptions.size]
-            updateBeatSelector()
-            updateDotsForBeat(0)
-            savePrefs()
-        }
+    private fun updateBeatDisplay() {
+        numeratorText.text = beatsPerBar.toString()
+        denominatorText.text = beatUnit.toString()
     }
 
     private fun updateDotsForBeat(beat: Int) {
@@ -184,7 +238,8 @@ class MainActivity : Activity() {
             var beat = 0
             var nextTick = System.nanoTime()
             while (isRunning) {
-                val intervalNs = 60_000_000_000L / bpm
+                // 一拍时值 = (60 / BPM) * (4 / 分母) 秒
+                val intervalNs = 60_000_000_000L * 4L / (bpm * beatUnit.toLong())
                 val accent = beat == 0 && accentEnabled
                 playClick(accent)
                 val displayBeat = beat
@@ -274,8 +329,8 @@ class MainActivity : Activity() {
     private fun loadPrefs() {
         val sp = getSharedPreferences("metronome", MODE_PRIVATE)
         bpm = sp.getInt("bpm", 120).coerceIn(30, 240)
-        val savedBeats = sp.getInt("beats", 4)
-        beatsPerBar = if (savedBeats in beatOptions) savedBeats else 4
+        beatsPerBar = sp.getInt("beats", 4).coerceIn(1, 16)
+        beatUnit = sp.getInt("beatUnit", 4).coerceIn(1, 16)
         accentEnabled = sp.getBoolean("accent", true)
     }
 
@@ -283,6 +338,7 @@ class MainActivity : Activity() {
         getSharedPreferences("metronome", MODE_PRIVATE).edit()
             .putInt("bpm", bpm)
             .putInt("beats", beatsPerBar)
+            .putInt("beatUnit", beatUnit)
             .putBoolean("accent", accentEnabled)
             .apply()
     }
