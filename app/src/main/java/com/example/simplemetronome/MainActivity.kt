@@ -224,37 +224,12 @@ class MainActivity : Activity() {
 
     private fun initAudio() {
         releaseAudio()
-        val sampleRate = 44100
-        val minBuf = AudioTrack.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        audioTrack = AudioTrack(
-            AudioManager.STREAM_MUSIC,
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            maxOf(minBuf, 8192),
-            AudioTrack.MODE_STREAM
-        ).apply { play() }
+        accentTrack = buildClickTrack(1200.0, 40, 0.9)
+        normalTrack = buildClickTrack(880.0, 25, 0.6)
     }
 
-    private fun releaseAudio() {
-        try {
-            audioTrack?.stop()
-            audioTrack?.release()
-        } catch (_: Exception) {
-        }
-        audioTrack = null
-    }
-
-    private fun playClick(accent: Boolean) {
-        val track = audioTrack ?: return
+    private fun buildClickTrack(freq: Double, durationMs: Int, amp: Double): AudioTrack {
         val sampleRate = 44100
-        val durationMs = if (accent) 40 else 25
-        val freq = if (accent) 1200.0 else 880.0
-        val amp = if (accent) 0.9 else 0.6
         val n = sampleRate * durationMs / 1000
         val buf = ShortArray(n)
         for (i in 0 until n) {
@@ -262,8 +237,36 @@ class MainActivity : Activity() {
             val env = 1.0 - i.toDouble() / n
             buf[i] = (sin(2 * Math.PI * freq * t) * amp * env * Short.MAX_VALUE).toInt().toShort()
         }
+        val track = AudioTrack(
+            AudioManager.STREAM_MUSIC,
+            sampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            buf.size * 2,
+            AudioTrack.MODE_STATIC
+        )
+        track.write(buf, 0, buf.size)
+        return track
+    }
+
+    private fun releaseAudio() {
         try {
-            track.write(buf, 0, buf.size)
+            accentTrack?.release()
+            normalTrack?.release()
+        } catch (_: Exception) {
+        }
+        accentTrack = null
+        normalTrack = null
+    }
+
+    private fun playClick(accent: Boolean) {
+        val track = (if (accent) accentTrack else normalTrack) ?: return
+        try {
+            if (track.playState != AudioTrack.PLAYSTATE_STOPPED) {
+                track.stop()
+            }
+            track.setPlaybackHeadPosition(0)
+            track.play()
         } catch (_: Exception) {
         }
     }
